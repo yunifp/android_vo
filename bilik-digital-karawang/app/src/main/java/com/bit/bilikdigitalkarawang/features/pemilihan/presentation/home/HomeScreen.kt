@@ -57,7 +57,7 @@ fun HomeScreen(
 
     val bolehBukaRekap = state.jumlahPemilihan == 0
 
-    val menuList = listOf(
+    val menuList = mutableListOf(
         // 🗳️ DATA PEMILIHAN
         MenuItem(
             "Data Kandidat",
@@ -80,10 +80,14 @@ fun HomeScreen(
         MenuItem(
             "Pemilihan",
             "Mulai proses pemungutan suara",
-            "Mulai proses pemungutan suara secara langsung setelah QR pemilih diverifikasi",
+            "Mulai proses pemungutan suara secara langsung setelah pemilih diverifikasi",
             R.drawable.ic_vote,
             {
-                if (state.sudahGantiKertas == "Y") {
+                // TODO NANTINYA: Cek if state.votingMethod == "Fingerprint" / "Face Recognition"
+                // Arahkan ke rute/alur online.
+                // Sementara tetap menggunakan logic yang sama:
+                if (state.sudahGantiKertas == "Y" || state.votingMethod != "QR Code") {
+                    // Kalau online, mungkin tidak butuh ganti kertas, jadi bisa langsung masuk
                     navController.navigate(Screen.KonfirmasiPin.createRoute(Screen.SystemCheck.route))
                 } else {
                     viewModel.alertGantiKertas()
@@ -122,16 +126,21 @@ fun HomeScreen(
             R.drawable.ic_setting,
             { navController.navigate(Screen.KonfirmasiPin.createRoute(Screen.Setting.route)) },
             MenuCategory.PENGATURAN
-        ),
-        MenuItem(
-            "Kelola Printer",
-            "Hubungkan printer Bluetooth",
-            "Hubungkan printer Bluetooth untuk mencetak hasil suara",
-            R.drawable.ic_printer,
-            { navController.navigate(Screen.KonfirmasiPin.createRoute(Screen.KelolaPerangkat.route)) },
-            MenuCategory.PENGATURAN
-        ),
+        )
     )
+
+    if (state.votingMethod == "QR Code") {
+        menuList.add(
+            MenuItem(
+                "Kelola Printer",
+                "Hubungkan printer Bluetooth",
+                "Hubungkan printer Bluetooth untuk mencetak hasil suara",
+                R.drawable.ic_printer,
+                { navController.navigate(Screen.KonfirmasiPin.createRoute(Screen.KelolaPerangkat.route)) },
+                MenuCategory.PENGATURAN
+            )
+        )
+    }
 
 
     val scope = rememberCoroutineScope()
@@ -218,7 +227,7 @@ fun HomeScreen(
                     BigUserInfoCard(userInfo = state.userInfo)
                 }
 
-                if (state.sudahGantiKertas == "N") {
+                if (state.sudahGantiKertas == "N" && state.votingMethod == "QR Code") {
                     item {
                         GantiKertasCard(onGantiKertas = { viewModel.confirmGantiKertas() })
                     }

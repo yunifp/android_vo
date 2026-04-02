@@ -23,6 +23,7 @@ import com.bit.bilikdigitalkarawang.features.pemilihan.presentation.pemilihan.co
 import com.bit.bilikdigitalkarawang.features.pemilihan.presentation.rekap.components.CPinConfirmationDialog
 import com.bit.bilikdigitalkarawang.features.setting.presentation.components.BackupRestoreSection
 import com.bit.bilikdigitalkarawang.features.setting.presentation.components.LastSyncCard
+import com.bit.bilikdigitalkarawang.features.setting.presentation.components.VotingMethodSection
 import com.bit.bilikdigitalkarawang.shared.presentation.components.CAlert
 import com.bit.bilikdigitalkarawang.shared.presentation.components.CHeader
 import com.bit.bilikdigitalkarawang.shared.presentation.components.CLoadingDialog
@@ -130,6 +131,15 @@ fun SettingScreen(
         )
     }
 
+    if (state.statusSavingVotingMethod != null) {
+        CAlert(
+            status = state.statusSavingVotingMethod!!,
+            title = if(state.statusSavingVotingMethod == CommonStatus.Success) "Berhasil" else "Gagal",
+            message = state.saveVotingMethodMsg,
+            onDismiss = { viewModel.hideAlert() }
+        )
+    }
+
     // Launcher untuk memilih lokasi file
     val createFileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -161,6 +171,20 @@ fun SettingScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // -> 1. Tampilkan Voting Method Section di sini
+                item {
+                    VotingMethodSection(
+                        selectedMethod = state.votingMethod,
+                        onMethodSelected = { method ->
+                            viewModel.saveVotingMethod(method)
+                        }
+                    )
+                }
+                item {
+                    Divider(modifier = Modifier.padding(vertical = 16.dp))
+                }
+
+                // -> 2. Baru Backup Restore Section
                 item {
                     BackupRestoreSection(
                         exportLocation = state.exportLocation,
@@ -175,6 +199,8 @@ fun SettingScreen(
                 item {
                     Divider(modifier = Modifier.padding(vertical = 16.dp))
                 }
+
+                // -> 3. Baru Last Sync Card
                 item {
                     LastSyncCard(
                         lastSyncTime = state.lastSyncPemilihan,

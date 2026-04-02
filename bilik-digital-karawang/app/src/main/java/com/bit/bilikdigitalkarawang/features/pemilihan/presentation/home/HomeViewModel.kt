@@ -10,6 +10,7 @@ import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.GetTotalPe
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.GetUserInfoUseCase
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.UpdateHasShownShowUseCase
 import com.bit.bilikdigitalkarawang.shared.data.source.local.datastore.DataStoreDiv
+import com.bit.bilikdigitalkarawang.features.setting.domain.GetVotingMethodUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +29,8 @@ class HomeViewModel @Inject constructor(
     private val getHasShownShowcaseUseCase: GetHasShownShowcaseUseCase,
     private val updateHasShownShowUseCase: UpdateHasShownShowUseCase,
     private val getTotalPemilihanUseCase: GetTotalPemilihanUseCase,
-    private val dataStoreDiv: DataStoreDiv
+    private val dataStoreDiv: DataStoreDiv,
+    private val getVotingMethodUseCase: GetVotingMethodUseCase
 ): ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -37,8 +39,16 @@ class HomeViewModel @Inject constructor(
     init {
         checkShowcaseStatus()
         getUserInfo()
+        getVotingMethod()
     }
 
+    private fun getVotingMethod() {
+        getVotingMethodUseCase().onEach { result ->
+            if (result is Resource.Success) {
+                _state.update { it.copy(votingMethod = result.data ?: "QR Code") }
+            }
+        }.launchIn(viewModelScope)
+    }
     fun checkShowcaseStatus() {
         getHasShownShowcaseUseCase().onEach { value ->
             val alreadyShown = value == "Y"

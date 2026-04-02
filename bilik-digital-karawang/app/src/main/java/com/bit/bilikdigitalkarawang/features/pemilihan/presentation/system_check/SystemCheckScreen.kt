@@ -108,8 +108,21 @@ fun SystemCheckScreen(
                     ) {
                         Button(
                             onClick = {
-                                navController.navigate(Screen.QrScanner.route) {
-                                    popUpTo(Screen.SystemCheck.route) { inclusive = true }
+                                // ----- LOGIKA BARU NAVIGASI BERDASARKAN MODE -----
+                                when (state.votingMethod) {
+                                    "Face Recognition" -> {
+                                        navController.navigate(Screen.FaceRecognition.route) {
+                                            popUpTo(Screen.SystemCheck.route) { inclusive = true }
+                                        }
+                                    }
+                                    "Fingerprint" -> {
+                                        // TODO: Arahkan ke rute Fingerprint nantinya
+                                    }
+                                    else -> {
+                                        navController.navigate(Screen.QrScanner.route) {
+                                            popUpTo(Screen.SystemCheck.route) { inclusive = true }
+                                        }
+                                    }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()

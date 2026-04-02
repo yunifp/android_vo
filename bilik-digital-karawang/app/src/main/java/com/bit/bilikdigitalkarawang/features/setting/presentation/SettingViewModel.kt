@@ -20,6 +20,8 @@ import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.SyncRekapU
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.SyncRowUseCase
 import com.bit.bilikdigitalkarawang.features.setting.domain.GetExportLocationUseCase
 import com.bit.bilikdigitalkarawang.features.setting.domain.SaveExportLocationUseCase
+import com.bit.bilikdigitalkarawang.features.setting.domain.GetVotingMethodUseCase
+import com.bit.bilikdigitalkarawang.features.setting.domain.SaveVotingMethodUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,7 +48,9 @@ class SettingViewModel @Inject constructor(
 
     private val getExportLocationUseCase: GetExportLocationUseCase,
     private val saveExportLocationUseCase: SaveExportLocationUseCase,
-    private val importPemilihanFromJsonUseCase: ImportPemilihanFromJsonUseCase
+    private val importPemilihanFromJsonUseCase: ImportPemilihanFromJsonUseCase,
+    private val getVotingMethodUseCase: GetVotingMethodUseCase,
+    private val saveVotingMethodUseCase: SaveVotingMethodUseCase
 ): ViewModel() {
 
     private val _state = MutableStateFlow(SettingState())
@@ -60,8 +64,8 @@ class SettingViewModel @Inject constructor(
         getJumlahTidakSah()
         getJumlahAbstain()
         getLastSyncPemilihan()
-
         getExportLocation()
+        getVotingMethod()
     }
 
     fun getJumlahPemilih() {
@@ -402,6 +406,51 @@ class SettingViewModel @Inject constructor(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    fun getVotingMethod() {
+        getVotingMethodUseCase().onEach { result ->
+            if (result is Resource.Success) {
+                _state.value = _state.value.copy(
+                    votingMethod = result.data ?: "QR Code"
+                )
+            }
+        }.launchIn(viewModelScope)
+    }
+
+    fun saveVotingMethod(method: String) {
+        saveVotingMethodUseCase(method).onEach { result ->
+            when (result) {
+                is Resource.Success -> {
+                    _state.value = _state.value.copy(
+                        votingMethod = method,
+                        statusSavingVotingMethod = CommonStatus.Success,
+                        saveVotingMethodMsg = "Metode pemilihan berhasil diubah"
+                    )
+                }
+                is Resource.Error -> {
+                    _state.value = _state.value.copy(
+                        statusSavingVotingMethod = CommonStatus.Error,
+                        saveVotingMethodMsg = result.message ?: "Gagal mengubah metode"
+                    )
+                }
+                else -> {}
+            }
+        }.launchIn(viewModelScope)
+
+        fun hideAlert() {
+            _state.update {
+                it.copy(
+                    statusSyncRekap = null,
+                    statusSyncRow = null,
+                    statusDownloadListVote = null,
+                    statusResetPemilihan = null,
+                    statusSavingExportLocation = null,
+                    statusRestoring = null,
+                    statusSavingVotingMethod = null // Tambahan
+                )
             }
         }
     }

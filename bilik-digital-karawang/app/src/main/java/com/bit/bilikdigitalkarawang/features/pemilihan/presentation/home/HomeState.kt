@@ -10,5 +10,6 @@ data class HomeState (
     val hasShownShowcase: Boolean = true,
     val jumlahPemilihan: Int = 0,
     val confirmBukaRekap: Boolean = false,
-    val showAlertTidakBisaBukaRekap: Boolean = false
+    val showAlertTidakBisaBukaRekap: Boolean = false,
+    val votingMethod: String = "QR Code"
 )

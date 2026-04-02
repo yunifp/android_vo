@@ -17,4 +17,6 @@ data class SystemCheckState(
 
     val printerCheck: CommonStatus = CommonStatus.Idle,
     val printerCheckMsg: String = "",
+
+    val votingMethod: String = "QR Code"
 )

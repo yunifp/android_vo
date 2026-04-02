@@ -46,6 +46,7 @@ class SystemCheckViewModel @Inject constructor(
     val state: StateFlow<SystemCheckState> = _state
 
     fun startSystemCheck() {
+        getVotingMethod()
         checkKandidatData()
         checkPemilihData()
         checkBackupPath()
@@ -53,6 +54,12 @@ class SystemCheckViewModel @Inject constructor(
         checkPrinter()
     }
 
+    private fun getVotingMethod() {
+        viewModelScope.launch {
+            val method = dataStoreDiv.getData("voting_method").first() ?: "QR Code"
+            _state.update { it.copy(votingMethod = method) }
+        }
+    }
     private fun checkKandidatData() {
         _state.update { it.copy(kandidatCheck = CommonStatus.Loading) }
 
@@ -193,7 +200,6 @@ class SystemCheckViewModel @Inject constructor(
                 val path = file.absolutePath
 
                 // Split by "/" dan ambil sampai storage ID
-                // Contoh: /storage/1234-5678/Android/data/... -> /storage/1234-5678
                 val parts = path.split("/")
                 if (parts.size >= 3) {
                     return "/${parts[1]}/${parts[2]}" // /storage/XXXX-XXXX
@@ -213,7 +219,6 @@ class SystemCheckViewModel @Inject constructor(
             "Unknown"
         }
     }
-
 
     private fun checkBackupPath() {
         _state.update { it.copy(backupPathCheck = CommonStatus.Loading) }
@@ -296,29 +301,20 @@ class SystemCheckViewModel @Inject constructor(
     private fun extractDisplayPath(path: String): String {
         return try {
             if (path.startsWith("content://")) {
-                // Decode URI
                 val decodedPath = Uri.decode(path)
-
-                // Extract dari format: content://...documents/document/3AE1-13DC:restore_folder/alddy.json
-                // Kita ambil bagian setelah storage ID (setelah ":")
                 val regex = """[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}:(.+)""".toRegex()
                 val match = regex.find(decodedPath)
 
                 if (match != null) {
-                    match.groupValues[1] // restore_folder/alddy.json
+                    match.groupValues[1]
                 } else {
-                    // Fallback: ambil nama file saja dari DocumentFile
                     val uri = Uri.parse(path)
                     val documentFile = DocumentFile.fromSingleUri(context, uri)
                     documentFile?.name ?: "Unknown"
                 }
             } else {
-                // Untuk file path biasa, extract setelah storage ID
-                // Dari: /storage/3AE1-13DC/restore_folder/alddy.json
-                // Ke: restore_folder/alddy.json
                 val parts = path.split("/")
                 if (parts.size >= 4 && parts[1] == "storage") {
-                    // Skip /storage/XXXX-XXXX/ dan ambil sisanya
                     parts.drop(3).joinToString("/")
                 } else {
                     path
@@ -336,12 +332,10 @@ class SystemCheckViewModel @Inject constructor(
         Log.d("BackupCheck", "🔍 Checking backup path: $backupPath")
         Log.d("BackupCheck", "💾 Against SD Card: $sdCardPath")
 
-        // Jika menggunakan Content URI (SAF)
         if (backupPath.startsWith("content://")) {
             return checkContentUriInSdCard(sdCardPath, backupPath)
         }
 
-        // Jika menggunakan file path biasa
         val file = File(backupPath)
         val isInsideSdCard = backupPath.startsWith(sdCardPath)
         val exists = file.exists() && file.isDirectory
@@ -357,22 +351,18 @@ class SystemCheckViewModel @Inject constructor(
 
             Log.d("BackupCheck", "🔍 Checking URI: $uriString")
 
-            // Ekstrak storage ID dari URI
             val storageIdFromUri = extractStorageIdFromUri(uriString)
             val storageIdFromPath = extractStorageIdFromPath(sdCardPath)
 
             Log.d("BackupCheck", "🔑 Storage ID from URI: $storageIdFromUri")
             Log.d("BackupCheck", "🔑 Storage ID from Path: $storageIdFromPath")
 
-            // Cek storage ID match
             val isSameStorage = storageIdFromUri != null &&
                     storageIdFromPath != null &&
                     storageIdFromUri == storageIdFromPath
 
             Log.d("BackupCheck", "✅ Same storage: $isSameStorage")
 
-            // Untuk backup file, cukup cek apakah storage ID match
-            // Karena file mungkin belum dibuat
             isSameStorage
 
         } catch (e: Exception) {
@@ -383,12 +373,9 @@ class SystemCheckViewModel @Inject constructor(
 
     private fun extractStorageIdFromUri(uriString: String): String? {
         return try {
-            // Decode URL encoding dulu
             val decodedUri = Uri.decode(uriString)
             Log.d("BackupCheck", "📝 Decoded URI: $decodedUri")
 
-            // Cari pattern storage ID (format: XXXX-XXXX atau xxxx-xxxx)
-            // Contoh dari: content://...documents/document/3AE1-13DC:alddy.json
             val regex = """([0-9A-Fa-f]{4}-[0-9A-Fa-f]{4})""".toRegex()
             val match = regex.find(decodedUri)?.value?.uppercase()
 
@@ -401,10 +388,9 @@ class SystemCheckViewModel @Inject constructor(
     }
 
     private fun extractStorageIdFromPath(path: String): String? {
-        // Dari /storage/3AE1-13DC/... ambil 3AE1-13DC
         val parts = path.split("/")
         val storageId = if (parts.size >= 3 && parts[1] == "storage") {
-            parts[2].uppercase() // Normalize ke uppercase
+            parts[2].uppercase()
         } else {
             null
         }
@@ -413,12 +399,30 @@ class SystemCheckViewModel @Inject constructor(
         return storageId
     }
 
-
     private fun checkPrinter() {
         _state.update { it.copy(printerCheck = CommonStatus.Loading) }
 
         viewModelScope.launch {
             try {
+                // ==========================================
+                // BYPASS JIKA BUKAN MODE "QR Code"
+                // ==========================================
+                val votingMethod = dataStoreDiv.getData("voting_method").first() ?: "QR Code"
+
+                if (votingMethod != "QR Code") {
+                    // Jika Fingerprint atau Face Recognition, bypass koneksi ke printer
+                    _state.update {
+                        it.copy(
+                            printerCheck = CommonStatus.Success,
+                            printerCheckMsg = "Printer tidak diperlukan (Mode $votingMethod aktif)"
+                        )
+                    }
+                    return@launch // Hentikan fungsi checkPrinter disini
+                }
+                // ==========================================
+
+
+                // Logika original: Cek printer karena mode QR Code
                 val mekanisme = dataStoreDiv.getData("mekanisme_print").first() ?: "bt"
 
                 Log.d("ASASDA", mekanisme)
@@ -461,6 +465,7 @@ class SystemCheckViewModel @Inject constructor(
 
         return usbPrinterManager.testPrinter()
     }
+
     private suspend fun connectPrinterWithRetry(maxRetries: Int = 2): Result<Unit> {
         repeat(maxRetries) { attempt ->
 

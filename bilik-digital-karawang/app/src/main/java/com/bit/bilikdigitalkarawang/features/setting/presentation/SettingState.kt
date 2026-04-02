@@ -37,5 +37,8 @@ data class SettingState (
     val saveExportLocationMsg: String = "",
     val isRestoring: Boolean = false,
     val statusRestoring: CommonStatus? = null,
-    val restoringMsg: String = ""
+    val restoringMsg: String = "",
+    val votingMethod: String = "QR Code",
+    val statusSavingVotingMethod: CommonStatus? = null,
+    val saveVotingMethodMsg: String = ""
 )

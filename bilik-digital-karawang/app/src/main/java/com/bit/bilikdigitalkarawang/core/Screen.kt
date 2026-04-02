@@ -28,4 +28,6 @@ sealed class Screen(val route: String) {
 
     object SystemCheck: Screen("system_check_screen")
 
+    object FaceRecognition: Screen("face_recognition_screen")
+
 }
