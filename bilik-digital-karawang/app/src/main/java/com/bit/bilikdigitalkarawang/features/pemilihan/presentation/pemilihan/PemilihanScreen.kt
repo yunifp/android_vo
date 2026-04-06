@@ -64,19 +64,32 @@ fun PemilihanScreen(
     nik: String,
     viewModel: PemilihanViewModel = hiltViewModel(),
 ) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
-    BackHandler {
-        navController.navigate(Screen.QrScanner.route) {
-            popUpTo(Screen.Pemilihan.route) {
-                inclusive = true
+    // --- LOGIKA NAVIGASI DINAMIS ---
+    val navigateBackToVerification = {
+        when (state.votingMethod) {
+            "Face Recognition" -> {
+                navController.navigate(Screen.FaceRecognition.route) {
+                    popUpTo(Screen.Pemilihan.route) { inclusive = true }
+                }
+            }
+            "Fingerprint" -> {
+                // TODO: Arahkan ke rute Fingerprint nantinya
+            }
+            else -> {
+                navController.navigate(Screen.QrScanner.route) {
+                    popUpTo(Screen.Pemilihan.route) { inclusive = true }
+                }
             }
         }
     }
 
+    BackHandler {
+        navigateBackToVerification()
+    }
+
     val context = LocalContext.current
-
-    val state by viewModel.state.collectAsStateWithLifecycle()
-
     val speak = rememberTextToSpeech(context)
 
     if(state.checkingNikStatus == true) {
@@ -103,14 +116,11 @@ fun PemilihanScreen(
         )
     }
 
+    // --- PENGGUNAAN NAVIGASI DINAMIS KETIKA NIK GAGAL ---
     LaunchedEffect(state.checkingNikStatus) {
         if(state.checkingNikStatus == false) {
             delay(2000)
-            navController.navigate(Screen.QrScanner.route) {
-                popUpTo(Screen.Pemilihan.route) {
-                    inclusive = true
-                }
-            }
+            navigateBackToVerification()
         }
     }
 
@@ -132,6 +142,7 @@ fun PemilihanScreen(
         )
     }
 
+    // --- PENGGUNAAN NAVIGASI DINAMIS SETELAH VOTE SELESAI ---
     LaunchedEffect(state.voteStatus) {
         if (state.voteStatus == CommonStatus.Success || state.voteStatus == CommonStatus.Error) {
             if(state.voteStatus == CommonStatus.Success) {
@@ -139,11 +150,7 @@ fun PemilihanScreen(
             }
             delay(5000)
             viewModel.resetSuccessVote()
-            navController.navigate(Screen.QrScanner.route) {
-                popUpTo(Screen.Pemilihan.route) {
-                    inclusive = true
-                }
-            }
+            navigateBackToVerification()
         }
     }
 

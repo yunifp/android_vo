@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
-import kotlin.compareTo
 import kotlin.coroutines.resume
 
 
@@ -51,6 +50,17 @@ class PemilihanViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(PemilihanState())
     val state: StateFlow<PemilihanState> = _state
+
+    init {
+        getVotingMethod() // <--- INIT UNTUK MENDAPATKAN METHOD SAAT VIEWMODEL DIBUAT
+    }
+
+    private fun getVotingMethod() {
+        viewModelScope.launch {
+            val method = dataStoreDiv.getData("voting_method").first() ?: "QR Code"
+            _state.update { it.copy(votingMethod = method) }
+        }
+    }
 
     fun getUserInfo() {
         getUserInfoUseCase().onEach { result ->

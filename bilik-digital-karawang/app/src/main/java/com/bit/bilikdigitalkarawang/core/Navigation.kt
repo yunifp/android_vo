@@ -1,5 +1,6 @@
 package com.bit.bilikdigitalkarawang.core
 
+import android.graphics.Bitmap
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
@@ -33,12 +34,23 @@ import com.bit.bilikdigitalkarawang.features.pemilihan.presentation.rekap.RekapS
 import com.bit.bilikdigitalkarawang.features.pemilihan.presentation.system_check.SystemCheckScreen
 import com.bit.bilikdigitalkarawang.features.setting.presentation.SettingScreen
 import com.bit.bilikdigitalkarawang.shared.data.source.local.datastore.DataStoreDiv
+
+// IMPORT FACE DETECTOR SCREEN DI SINI
+import com.bit.bilikdigitalkarawang.features.pemilihan.presentation.face_recognition.FaceDetectorScreen
+import com.bit.bilikdigitalkarawang.features.pemilihan.presentation.fingerBiometrik.FingerprintScannerScreen
 import kotlinx.coroutines.flow.first
 
 @Composable
 fun Navigation(
     navController: NavHostController,
-    dataStoreDiv: DataStoreDiv
+    dataStoreDiv: DataStoreDiv,
+    // --- PARAMETER TAMBAHAN UNTUK HARDWARE ZKTECO ---
+    isConnected: Boolean,
+    capturedBitmap: Bitmap?,
+    capturedTemplate: ByteArray?,
+    scanTrigger: Int,
+    onConnectRequest: () -> Unit,
+    onResetHardwareData: () -> Unit
 ) {
 
     var hasLogin by remember { mutableStateOf<Boolean?>(null) }
@@ -109,7 +121,7 @@ fun Navigation(
                 SettingScreen(navController)
             }
             composable(
-                route = Screen.KonfirmasiPin.route, // "konfirmasi_pin_screen/{targetRoute}"
+                route = Screen.KonfirmasiPin.route,
                 arguments = listOf(
                     navArgument("targetRoute") { type = NavType.StringType },
                 )
@@ -162,6 +174,42 @@ fun Navigation(
             composable(route = Screen.SystemCheck.route) {
                 SystemCheckScreen(navController)
             }
+
+            // ===== INI ADALAH BLOK FACE RECOGNITION =====
+            composable(route = Screen.FaceRecognition.route) {
+                FaceDetectorScreen(
+                    onBack = { navController.popBackStack() },
+                    onSuccessLiveness = { nik ->
+                        navController.navigate(Screen.Pemilihan.createRoute(nik)) {
+                            popUpTo(Screen.FaceRecognition.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            // =======================================
+
+            // ===== INI ADALAH BLOK FINGERPRINT YANG DITAMBAHKAN =====
+            composable(route = Screen.FingerBiometrik.route) {
+                // Mereset cache data jari setiap kali masuk ke halaman ini
+                LaunchedEffect(Unit) {
+                    onResetHardwareData()
+                }
+
+                FingerprintScannerScreen(
+                    isConnected = isConnected,
+                    capturedBitmap = capturedBitmap,
+                    capturedTemplate = capturedTemplate,
+                    onConnect = onConnectRequest,
+                    scanTrigger = scanTrigger,
+                    onBack = { navController.popBackStack() },
+                    onSuccessFingerprint = { nik ->
+                        navController.navigate(Screen.Pemilihan.createRoute(nik)) {
+                            popUpTo(Screen.FingerBiometrik.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            // =======================================
         }
     }
 }

@@ -324,7 +324,7 @@ class SettingViewModel @Inject constructor(
     }
 
     fun hideAlert() {
-        _state.update { it.copy(statusSyncRekap = null, statusSyncRow = null, statusDownloadListVote = null, statusResetPemilihan = null, statusSavingExportLocation = null,  statusRestoring = null) }
+        _state.update { it.copy(statusSyncRekap = null, statusSyncRow = null, statusDownloadListVote = null, statusResetPemilihan = null, statusSavingExportLocation = null,  statusRestoring = null, statusSavingVotingMethod = null ) }
     }
 
     fun getExportLocation() {
@@ -440,19 +440,7 @@ class SettingViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
 
-        fun hideAlert() {
-            _state.update {
-                it.copy(
-                    statusSyncRekap = null,
-                    statusSyncRow = null,
-                    statusDownloadListVote = null,
-                    statusResetPemilihan = null,
-                    statusSavingExportLocation = null,
-                    statusRestoring = null,
-                    statusSavingVotingMethod = null // Tambahan
-                )
-            }
-        }
+
     }
 
 }

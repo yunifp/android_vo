@@ -85,18 +85,18 @@ fun SystemCheckScreen(
                 message = state.printerCheckMsg
             )
 
+
             // Action Buttons
             val allChecked = state.kandidatCheck !is CommonStatus.Idle &&
                     state.pemilihCheck !is CommonStatus.Idle &&
                     state.sdCardCheck !is CommonStatus.Idle &&
-                    state.backupPathCheck !is CommonStatus.Idle &&
-                    state.printerCheck !is CommonStatus.Idle
-
+                    state.backupPathCheck !is CommonStatus.Idle
+                    && state.printerCheck !is CommonStatus.Idle // DIABAIKAN SEMENTARA
             val allSuccess = state.kandidatCheck is CommonStatus.Success &&
                     state.pemilihCheck is CommonStatus.Success &&
                     state.sdCardCheck is CommonStatus.Success &&
-                    state.backupPathCheck is CommonStatus.Success &&
-                    state.printerCheck is CommonStatus.Success
+                    state.backupPathCheck is CommonStatus.Success
+                    && state.printerCheck is CommonStatus.Success // DIABAIKAN SEMENTARA
 
             if (allChecked) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -116,7 +116,9 @@ fun SystemCheckScreen(
                                         }
                                     }
                                     "Fingerprint" -> {
-                                        // TODO: Arahkan ke rute Fingerprint nantinya
+                                        navController.navigate(Screen.FingerBiometrik.route) {
+                                            popUpTo(Screen.SystemCheck.route) { inclusive = true }
+                                        }
                                     }
                                     else -> {
                                         navController.navigate(Screen.QrScanner.route) {

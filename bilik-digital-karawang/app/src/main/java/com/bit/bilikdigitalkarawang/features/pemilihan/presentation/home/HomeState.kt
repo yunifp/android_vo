@@ -11,5 +11,7 @@ data class HomeState (
     val jumlahPemilihan: Int = 0,
     val confirmBukaRekap: Boolean = false,
     val showAlertTidakBisaBukaRekap: Boolean = false,
-    val votingMethod: String = "QR Code"
+    val votingMethod: String = "QR Code",
+    val isServerOnline: Boolean = true,
+    val connectionMessage: String = ""
 )

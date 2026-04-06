@@ -11,6 +11,8 @@ import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.GetUserInf
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.UpdateHasShownShowUseCase
 import com.bit.bilikdigitalkarawang.shared.data.source.local.datastore.DataStoreDiv
 import com.bit.bilikdigitalkarawang.features.setting.domain.GetVotingMethodUseCase
+import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.CheckConnectionUseCase
+import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +32,8 @@ class HomeViewModel @Inject constructor(
     private val updateHasShownShowUseCase: UpdateHasShownShowUseCase,
     private val getTotalPemilihanUseCase: GetTotalPemilihanUseCase,
     private val dataStoreDiv: DataStoreDiv,
-    private val getVotingMethodUseCase: GetVotingMethodUseCase
+    private val getVotingMethodUseCase: GetVotingMethodUseCase,
+    private val checkConnectionUseCase: CheckConnectionUseCase
 ): ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -40,6 +43,7 @@ class HomeViewModel @Inject constructor(
         checkShowcaseStatus()
         getUserInfo()
         getVotingMethod()
+        startConnectionObserver()
     }
 
     private fun getVotingMethod() {
@@ -132,5 +136,32 @@ class HomeViewModel @Inject constructor(
 
     fun hideAlert() {
         _state.update { it.copy(showAlertGantiKertas = false, showConfirmGantiKertas = false, showAlertTidakBisaBukaRekap = false, confirmBukaRekap = false) }
+    }
+    private fun startConnectionObserver() {
+        viewModelScope.launch {
+            while (true) {
+                // Hanya periksa koneksi secara intensif jika metodenya Face/Fingerprint (Mode Online)
+                val isOnlineMode = _state.value.votingMethod != "QR Code"
+
+                if (isOnlineMode) {
+                    checkConnectionUseCase().collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                _state.update { it.copy(isServerOnline = true, connectionMessage = "Online") }
+                            }
+                            is Resource.Error -> {
+                                _state.update { it.copy(isServerOnline = false, connectionMessage = result.message ?: "Koneksi Bermasalah") }
+                            }
+                            else -> {}
+                        }
+                    }
+                } else {
+                    // Kalau mode QR Code (Offline), anggap selalu online agar banner merah tidak muncul mengganggu
+                    _state.update { it.copy(isServerOnline = true) }
+                }
+
+                delay(5000) // Jeda 5 detik sebelum nge-ping lagi
+            }
+        }
     }
 }

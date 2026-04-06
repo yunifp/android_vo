@@ -13,6 +13,8 @@ import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import okhttp3.ResponseBody
+import retrofit2.Response
 
 interface ApiService {
     @Multipart
@@ -32,6 +34,9 @@ interface ApiService {
     suspend fun getPemilih(
         @Header("Authorization") authorization: String
     ): PemilihResponse
+
+    @GET("check-connection")
+    suspend fun checkConnection(): Response<ResponseBody>
 
     @Multipart
     @POST("rekap_hasil_pemilihan")

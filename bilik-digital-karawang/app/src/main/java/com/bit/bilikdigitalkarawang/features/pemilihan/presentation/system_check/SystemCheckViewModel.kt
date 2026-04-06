@@ -51,7 +51,7 @@ class SystemCheckViewModel @Inject constructor(
         checkPemilihData()
         checkBackupPath()
         checkSdCard()
-        checkPrinter()
+        checkPrinter() // DIABAIKAN SEMENTARA
     }
 
     private fun getVotingMethod() {
@@ -60,6 +60,7 @@ class SystemCheckViewModel @Inject constructor(
             _state.update { it.copy(votingMethod = method) }
         }
     }
+
     private fun checkKandidatData() {
         _state.update { it.copy(kandidatCheck = CommonStatus.Loading) }
 
@@ -399,30 +400,13 @@ class SystemCheckViewModel @Inject constructor(
         return storageId
     }
 
+
     private fun checkPrinter() {
         _state.update { it.copy(printerCheck = CommonStatus.Loading) }
 
         viewModelScope.launch {
             try {
-                // ==========================================
-                // BYPASS JIKA BUKAN MODE "QR Code"
-                // ==========================================
-                val votingMethod = dataStoreDiv.getData("voting_method").first() ?: "QR Code"
-
-                if (votingMethod != "QR Code") {
-                    // Jika Fingerprint atau Face Recognition, bypass koneksi ke printer
-                    _state.update {
-                        it.copy(
-                            printerCheck = CommonStatus.Success,
-                            printerCheckMsg = "Printer tidak diperlukan (Mode $votingMethod aktif)"
-                        )
-                    }
-                    return@launch // Hentikan fungsi checkPrinter disini
-                }
-                // ==========================================
-
-
-                // Logika original: Cek printer karena mode QR Code
+                // Selalu cek printer (Logika original)
                 val mekanisme = dataStoreDiv.getData("mekanisme_print").first() ?: "bt"
 
                 Log.d("ASASDA", mekanisme)
@@ -488,6 +472,7 @@ class SystemCheckViewModel @Inject constructor(
 
         return Result.failure(Exception("Gagal terhubung ke printer"))
     }
+
 
     fun retryCheck() {
         _state.value = SystemCheckState()

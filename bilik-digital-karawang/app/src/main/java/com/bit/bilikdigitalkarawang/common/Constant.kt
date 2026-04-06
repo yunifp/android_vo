@@ -8,5 +8,5 @@ object Constant {
     val API_BASE_URL = BuildConfig.API_BASE_URL
 
     const val TOTAL_JUMLAH_PEMILIH_PER_SESI_KERTAS = 500
-    const val VERSI = "v1.0"
+    const val VERSI = "v2.0"
 }

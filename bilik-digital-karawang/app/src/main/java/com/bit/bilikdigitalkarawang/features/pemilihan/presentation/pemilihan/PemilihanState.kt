@@ -19,5 +19,6 @@ data class PemilihanState (
     val checkingNikStatusMsg: String = "",
     val printStatus: CommonStatus = CommonStatus.Idle,
     val printStatusMsg: String = "",
-    val userInfo: UserInfo? = null
+    val userInfo: UserInfo? = null,
+    val votingMethod: String = "QR Code" // <--- PROPERTY BARU
 )
