@@ -143,19 +143,33 @@ class PemilihanViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
+//    fun toggleKandidatSelection(kandidat: Kandidat) {
+//        _state.update { currentState ->
+//            val currentSelection = currentState.kandidatTerpilih.toMutableList()
+//
+//            // Jika kandidat sudah dipilih, hapus; kalau belum, tambah
+//            if (currentSelection.any { it.noUrut == kandidat.noUrut }) {
+//                currentSelection.removeAll { it.noUrut == kandidat.noUrut }
+//            } else {
+//                currentSelection.add(kandidat)
+//            }
+//
+//            currentState.copy(
+//                kandidatTerpilih = currentSelection
+//            )
+//        }
+//    }
+
+    // NO GOLPUT
     fun toggleKandidatSelection(kandidat: Kandidat) {
         _state.update { currentState ->
-            val currentSelection = currentState.kandidatTerpilih.toMutableList()
+            // Cek apakah kandidat yang di-klik saat ini sudah dalam keadaan terpilih
+            val isAlreadySelected = currentState.kandidatTerpilih.any { it.noUrut == kandidat.noUrut }
 
-            // Jika kandidat sudah dipilih, hapus; kalau belum, tambah
-            if (currentSelection.any { it.noUrut == kandidat.noUrut }) {
-                currentSelection.removeAll { it.noUrut == kandidat.noUrut }
-            } else {
-                currentSelection.add(kandidat)
-            }
-
+            // Jika sudah terpilih -> kosongkan list (batal pilih)
+            // Jika belum terpilih -> jadikan kandidat ini sebagai SATU-SATUNYA di dalam list
             currentState.copy(
-                kandidatTerpilih = currentSelection
+                kandidatTerpilih = if (isAlreadySelected) emptyList() else listOf(kandidat)
             )
         }
     }

@@ -11,6 +11,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -35,13 +40,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -66,7 +75,6 @@ fun PemilihanScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // --- LOGIKA NAVIGASI DINAMIS ---
     val navigateBackToVerification = {
         when (state.votingMethod) {
             "Face Recognition" -> {
@@ -75,7 +83,9 @@ fun PemilihanScreen(
                 }
             }
             "Fingerprint" -> {
-                // TODO: Arahkan ke rute Fingerprint nantinya
+                navController.navigate(Screen.FingerBiometrik.route) {
+                    popUpTo(Screen.Pemilihan.route) { inclusive = true }
+                }
             }
             else -> {
                 navController.navigate(Screen.QrScanner.route) {
@@ -116,7 +126,6 @@ fun PemilihanScreen(
         )
     }
 
-    // --- PENGGUNAAN NAVIGASI DINAMIS KETIKA NIK GAGAL ---
     LaunchedEffect(state.checkingNikStatus) {
         if(state.checkingNikStatus == false) {
             delay(2000)
@@ -142,7 +151,6 @@ fun PemilihanScreen(
         )
     }
 
-    // --- PENGGUNAAN NAVIGASI DINAMIS SETELAH VOTE SELESAI ---
     LaunchedEffect(state.voteStatus) {
         if (state.voteStatus == CommonStatus.Success || state.voteStatus == CommonStatus.Error) {
             if(state.voteStatus == CommonStatus.Success) {
@@ -177,62 +185,124 @@ fun PemilihanScreen(
                     .fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp)
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Logo
-                    Image(
-                        painter = painterResource(R.drawable.logo_karawang),
-                        contentDescription = "Logo Karawang",
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // --- LOGO DIPERBESAR ---
+                        Image(
+                            painter = painterResource(R.drawable.logo_karawang),
+                            contentDescription = "Logo Karawang",
+                            modifier = Modifier
+                                .width(90.dp)
+                                .height(90.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // --- TEKS DIPERBESAR ---
+                        Column(
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "SURAT SUARA",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp
+                                ),
+                                textAlign = TextAlign.Start
+                            )
+
+                            Text(
+                                text = "PEMILIHAN KEPALA DESA ${state.userInfo?.namaKel ?: ""}",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                ),
+                                textAlign = TextAlign.Start
+                            )
+
+                            Text(
+                                text = "KEC. ${state.userInfo?.namaKec ?: ""}, KAB. KARAWANG TAHUN 2025",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                ),
+                                textAlign = TextAlign.Start
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // --- CARD GOLPUT (TIDAK MEMILIH) ---
+                    Card(
                         modifier = Modifier
-                            .width(80.dp)
-                            .height(80.dp)
-                    )
+                            .width(120.dp)
+                            .height(140.dp)
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.error,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .shadow(
+                                elevation = 6.dp,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable(enabled = state.voteStatus != CommonStatus.Loading) {
+                                viewModel.resetKandidat()
+                                viewModel.showConfirm(true)
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.user),
+                                contentDescription = "Tidak Memilih",
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                contentScale = ContentScale.Fit
+                            )
 
-                    // Teks Header
-                    Text(
-                        text = "SURAT SUARA",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        textAlign = TextAlign.Center
-                    )
+                            Spacer(modifier = Modifier.height(12.dp))
 
-
-                    Text(
-                        text = "PEMILIHAN KEPALA DESA ${state.userInfo?.namaKel}",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Text(
-                        text = "KECAMATAN ${state.userInfo?.namaKec}",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Text(
-                        text = "KABUPATEN KARAWANG",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Text(
-                        text = "TAHUN 2025",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        textAlign = TextAlign.Center
-                    )
+                            Text(
+                                text = "TIDAK\nMEMILIH",
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
                 }
-
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val kandidatList = state.kandidatList.take(5)
@@ -243,28 +313,22 @@ fun PemilihanScreen(
                             selected = state.kandidatTerpilih.any { it.noUrut == kandidat.noUrut },
                             onClick = { viewModel.toggleKandidatSelection(kandidat) },
                             modifier = Modifier
-                                .width(240.dp)  // lebar tetap, bisa kamu sesuaikan
-                                .height(330.dp) // tinggi tetap, proporsional dengan lebar
+                                .width(240.dp)
+                                .height(330.dp)
                         )
                     }
                 }
 
-
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Tambahkan animasi di button
                 val shouldAnimate = state.kandidatTerpilih.isNotEmpty()
-
                 val infiniteTransition = rememberInfiniteTransition(label = "pulse")
 
                 val alpha by infiniteTransition.animateFloat(
                     initialValue = 1f,
                     targetValue = 0.8f,
                     animationSpec = infiniteRepeatable(
-                        animation = tween(
-                            durationMillis = 800,
-                            easing = FastOutSlowInEasing
-                        ),
+                        animation = tween(800, easing = FastOutSlowInEasing),
                         repeatMode = RepeatMode.Reverse
                     ),
                     label = "alpha"
@@ -274,24 +338,17 @@ fun PemilihanScreen(
                     initialValue = 1f,
                     targetValue = 0.95f,
                     animationSpec = infiniteRepeatable(
-                        animation = tween(
-                            durationMillis = 800,
-                            easing = FastOutSlowInEasing
-                        ),
+                        animation = tween(800, easing = FastOutSlowInEasing),
                         repeatMode = RepeatMode.Reverse
                     ),
                     label = "scale"
                 )
 
-                // Animasi untuk icon tangan (bounce effect)
                 val iconOffset by infiniteTransition.animateFloat(
                     initialValue = 0f,
                     targetValue = -10f,
                     animationSpec = infiniteRepeatable(
-                        animation = tween(
-                            durationMillis = 600,
-                            easing = FastOutSlowInEasing
-                        ),
+                        animation = tween(600, easing = FastOutSlowInEasing),
                         repeatMode = RepeatMode.Reverse
                     ),
                     label = "iconOffset"
@@ -314,11 +371,10 @@ fun PemilihanScreen(
                                     scaleY = scale
                                 }
                             },
-                        backgroundColor = MaterialTheme.colorScheme.error,
+                        backgroundColor = MaterialTheme.colorScheme.primary,
                         textColor = Color.White,
-                        enabled = state.voteStatus != CommonStatus.Loading
+                        enabled = state.voteStatus != CommonStatus.Loading && state.kandidatTerpilih.isNotEmpty()
                     )
-
 
                     if (shouldAnimate) {
                         Image(
@@ -327,10 +383,10 @@ fun PemilihanScreen(
                             modifier = Modifier
                                 .size(96.dp)
                                 .align(Alignment.TopCenter)
-                                .offset(y = (-44).dp) // Posisi di atas button (negatif untuk ke atas)
+                                .offset(y = (-44).dp)
                                 .graphicsLayer {
-                                    translationY = -iconOffset // Negatif agar bounce ke bawah (menunjuk button)
-                                    rotationZ = 180f // Rotasi 180 derajat agar jari menunjuk ke bawah
+                                    translationY = -iconOffset
+                                    rotationZ = 180f
                                 }
                         )
                     }
@@ -365,7 +421,6 @@ fun rememberTextToSpeech(context: Context): (String) -> Unit {
                 isReady = true
             }
         }
-
         onDispose {
             tts.value?.shutdown()
             tts.value = null
@@ -376,8 +431,7 @@ fun rememberTextToSpeech(context: Context): (String) -> Unit {
         { text: String ->
             if (isReady) {
                 tts.value?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
-            } else {
-            }
+            } else {}
         }
     }
 }

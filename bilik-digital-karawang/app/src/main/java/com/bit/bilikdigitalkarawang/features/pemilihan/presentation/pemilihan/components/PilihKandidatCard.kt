@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -136,6 +137,7 @@ fun PilihKandidatCard(
                         contentDescription = "Dipilih",
                         modifier = Modifier
                             .align(Alignment.Center)
+                            .offset(y = 80.dp)
                             .size(128.dp)
                             .scale(pulseScale)
                             .zIndex(1f)

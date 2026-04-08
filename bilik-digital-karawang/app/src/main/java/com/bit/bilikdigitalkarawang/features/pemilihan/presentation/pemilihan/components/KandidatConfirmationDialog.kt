@@ -80,7 +80,7 @@ fun KandidatConfirmationDialog(
                 val warningMessage = when {
                     selectedCandidates.isEmpty() || selectedCandidates.size > 1 -> {
                         buildAnnotatedString {
-                            append("Apakah Anda yakin? Anda memilih lebih dari satu kandidat, jika ya suara Anda akan dianggap ")
+                            append("Apakah Anda yakin? Tidak memilih salah satu dari kandidat, jika ya suara Anda akan dianggap ")
 
                             withStyle(
                                 style = SpanStyle(
