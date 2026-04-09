@@ -153,12 +153,13 @@ fun RekapScreen(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                         }
-                        items(state.listSuaraSah.sortedBy { it.noUrut.toIntOrNull() ?: Int.MAX_VALUE }) {
+                        items(
+                            items = state.listSuaraSah.sortedBy { it.noUrut.toIntOrNull() ?: Int.MAX_VALUE },
+                            key = { it.noUrut }
+                        ) {
                             SuaraSahCard(it)
                         }
-                        items(state.listSuaraSah) {
-                            SuaraSahCard(it)
-                        }
+
 //                        item {
 //                            Button(onClick = {
 //                                viewModel.exportJson()
