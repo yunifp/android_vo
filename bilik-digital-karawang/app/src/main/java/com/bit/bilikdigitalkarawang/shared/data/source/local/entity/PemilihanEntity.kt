@@ -9,8 +9,10 @@ data class PemilihanEntity(
     val id: Int = 0,
     val idDpt: String,
     val nik: String,
-    val noUrut: String?,
-    val namaKandidat: String?,
+
+    // GANTI noUrut dan namaKandidat menjadi heVotesMap
+    val heVotesMap: String,
+
     val idStatus: Int,
     val jenisKelamin: String,
     val hasPrintUlang: Int = 0

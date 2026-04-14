@@ -12,7 +12,6 @@ import com.bit.bilikdigitalkarawang.features.pemilihan.domain.mapper.toKandidat
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.mapper.toPemilih
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.mapper.toPemilihan
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.mapper.toRequest
-import com.bit.bilikdigitalkarawang.features.pemilihan.domain.mapper.toSuaraSah
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.model.Kandidat
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.model.Pemilih
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.model.Pemilihan
@@ -23,7 +22,6 @@ import com.bit.bilikdigitalkarawang.shared.data.source.local.dao.PemilihDao
 import com.bit.bilikdigitalkarawang.shared.data.source.local.dao.PemilihanDao
 import com.bit.bilikdigitalkarawang.shared.data.source.local.entity.PemilihanEntity
 import com.bit.bilikdigitalkarawang.shared.data.source.remote.ApiService
-import com.bit.bilikdigitalkarawang.features.pemilihan.domain.model.SuaraSah
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.model.SyncRekap
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.model.SyncRow
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -65,9 +63,7 @@ class PemilihanRepositoryImpl @Inject constructor(
     override suspend fun downloadKandidat(token: String): CommonStatus {
         return try {
             val response = apiService.getKandidat(token)
-
             if (response.success) {
-                // Clear old data and insert new data
                 kandidatDao.clearAll()
                 val entities = response.kandidatSumDto.kandidatDtos.map { dto ->
                     val localImagePath = withContext(Dispatchers.IO) {
@@ -76,14 +72,12 @@ class PemilihanRepositoryImpl @Inject constructor(
                     dto.toEntity(localImagePath)
                 }
                 kandidatDao.insertAllKandidat(entities)
-
                 CommonStatus.Success
             } else {
                 CommonStatus.Error
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.d(Constant.LOG_TAG, e.localizedMessage)
             CommonStatus.Error
         }
     }
@@ -91,20 +85,16 @@ class PemilihanRepositoryImpl @Inject constructor(
     override suspend fun downloadPemilih(token: String): CommonStatus {
         return try {
             val response = apiService.getPemilih(token)
-
             if (response.success) {
-                // Clear old data and insert new data
                 pemilihDao.clearAll()
                 val entities = response.pemilihSumDto.pemilihDto.map { it.toEntity() }
                 pemilihDao.insertAllPemilih(entities)
-
                 CommonStatus.Success
             } else {
                 CommonStatus.Error
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.d(Constant.LOG_TAG, e.toString())
             CommonStatus.Error
         }
     }
@@ -125,79 +115,31 @@ class PemilihanRepositoryImpl @Inject constructor(
         val idDptBody = pemilihan.idDpt.toRequestBody("text/plain".toMediaType())
         val nikBody = pemilihan.nik.toRequestBody("text/plain".toMediaType())
         val noUrutBody = pemilihan.noUrut?.toRequestBody("text/plain".toMediaType())
-            ?: "".toRequestBody("text/plain".toMediaType()) // kosong jika null
+            ?: "".toRequestBody("text/plain".toMediaType())
         val statusBody = pemilihan.idStatus.toString().toRequestBody("text/plain".toMediaType())
 
-        return apiService.postVote(
-            authorization = token,
-            idDpt = idDptBody,
-            nik = nikBody,
-            noUrut = noUrutBody,
-            status = statusBody
-        )
+        return apiService.postVote(token, idDptBody, nikBody, noUrutBody, statusBody)
     }
 
     override suspend fun getListVote(token: String, deviceId: String): ListVoteResponse {
         return apiService.getListVote(token, deviceId.toRequestBody())
     }
 
-    override fun getJumlahSuaraSahPerKandidat(): Flow<List<SuaraSah>> {
-        return pemilihanDao.getJumlahSuaraSahPerKandidat()
-            .map { list -> list.map { it.toSuaraSah() } }
-    }
-
-    override fun getJumlahPemilih(): Flow<Int> {
-        return pemilihDao.countAllPemilih()
-    }
-
-    override fun getJumlahSah(): Flow<Int> {
-        return pemilihanDao.getJumlahSah()
-    }
-
-    override fun getJumlahSahLaki(): Flow<Int> {
-        return pemilihanDao.getJumlahSahLaki()
-    }
-
-    override fun getJumlahSahPerempuan(): Flow<Int> {
-        return pemilihanDao.getJumlahSahPerempuan()
-    }
-
-    override fun getJumlahTidakSah(): Flow<Int> {
-        return pemilihanDao.getJumlahTidakSah()
-    }
-
-    override fun getJumlahTidakSahLaki(): Flow<Int> {
-        return pemilihanDao.getJumlahTidakSahLaki()
-    }
-
-    override fun getJumlahTidakSahPerempuan(): Flow<Int> {
-        return pemilihanDao.getJumlahTidakSahPerempuan()
-    }
-
-    override fun getJumlahAbstain(): Flow<Int> {
-        return pemilihanDao.getJumlahAbstain()
-    }
-
-    override fun getJumlahAbstainLaki(): Flow<Int> {
-        return pemilihanDao.getJumlahAbstainLaki()
-    }
-
-    override fun getJumlahAbstainPerempuan(): Flow<Int> {
-        return pemilihanDao.getJumlahAbstainPerempuan()
-    }
-
-    override fun getPemilihByKandidat(noUrut: Int): Flow<List<PemilihanEntity>> {
-        return pemilihanDao.getPemilihByKandidat(noUrut)
-    }
-
-    override suspend fun getTotalPemilihan(): Int {
-        return pemilihanDao.getTotalPemilihan()
-    }
+    override fun getJumlahPemilih(): Flow<Int> = pemilihDao.countAllPemilih()
+    override fun getJumlahSah(): Flow<Int> = pemilihanDao.getJumlahSah()
+    override fun getJumlahSahLaki(): Flow<Int> = pemilihanDao.getJumlahSahLaki()
+    override fun getJumlahSahPerempuan(): Flow<Int> = pemilihanDao.getJumlahSahPerempuan()
+    override fun getJumlahTidakSah(): Flow<Int> = pemilihanDao.getJumlahTidakSah()
+    override fun getJumlahTidakSahLaki(): Flow<Int> = pemilihanDao.getJumlahTidakSahLaki()
+    override fun getJumlahTidakSahPerempuan(): Flow<Int> = pemilihanDao.getJumlahTidakSahPerempuan()
+    override fun getJumlahAbstain(): Flow<Int> = pemilihanDao.getJumlahAbstain()
+    override fun getJumlahAbstainLaki(): Flow<Int> = pemilihanDao.getJumlahAbstainLaki()
+    override fun getJumlahAbstainPerempuan(): Flow<Int> = pemilihanDao.getJumlahAbstainPerempuan()
+    override suspend fun getTotalPemilihan(): Int = pemilihanDao.getTotalPemilihan()
 
     override suspend fun syncRekap(token: String, data: SyncRekap): CommonStatus {
         return try {
             val request = data.toRequest()
-
             val response = apiService.syncRekap(
                 authorization = token,
                 jumlahPartisipasi = request.jumlahPartisipasi,
@@ -213,67 +155,40 @@ class PemilihanRepositoryImpl @Inject constructor(
                 jumlahPemilihNoUrut7 = request.suaraPerKandidat.getOrNull(6) ?: "0".toRequestBody("text/plain".toMediaType()),
                 jumlahPemilihNoUrut8 = request.suaraPerKandidat.getOrNull(7) ?: "0".toRequestBody("text/plain".toMediaType()),
             )
-
-            if (response.success) {
-                CommonStatus.Success
-            } else {
-                CommonStatus.Error
-            }
+            if (response.success) CommonStatus.Success else CommonStatus.Error
         } catch (e: Exception) {
-            e.printStackTrace()
             CommonStatus.Error
         }
     }
 
     override suspend fun syncRow(token: String, data: SyncRow): CommonStatus {
         return try {
-            val request = data.toRequest()
-
-            val response = apiService.syncRow(
-                authorization = token,
-                votes = request.votes
-            )
-
-            Log.d(Constant.LOG_TAG, response.message)
-
-            if (response.success) {
-                CommonStatus.Success
-            } else {
-                CommonStatus.Error
-            }
+            val response = apiService.syncRow(token, data.toRequest().votes)
+            if (response.success) CommonStatus.Success else CommonStatus.Error
         } catch (e: Exception) {
-            e.printStackTrace()
-
             CommonStatus.Error
         }
     }
 
     override suspend fun resetPemilihan(): CommonStatus {
-        try {
+        return try {
             pemilihanDao.resetPemilihan()
-            return CommonStatus.Success
+            CommonStatus.Success
         } catch (e: Exception) {
-            return CommonStatus.Error
+            CommonStatus.Error
         }
     }
 
-    override suspend fun checkHasPrintUlang(nik: String): Boolean {
-        return pemilihanDao.hasPrintUlang(nik) == 1
-    }
+    override suspend fun checkHasPrintUlang(nik: String): Boolean = pemilihanDao.hasPrintUlang(nik) == 1
 
     override suspend fun updateHasPrintUlang(nik: String): CommonStatus {
-        try {
+        return try {
             pemilihanDao.updateHasPrintUlang(nik)
-            return CommonStatus.Success
+            CommonStatus.Success
         } catch (e: Exception) {
-            return CommonStatus.Error
+            CommonStatus.Error
         }
     }
 
-    override fun getLastRowPemilihan(): Flow<String?> {
-        return pemilihanDao.getNikLastRowPemilihan()
-            .catch { emit(null) } // atau emit("Gagal") jika mau
-    }
-
-
+    override fun getLastRowPemilihan(): Flow<String?> = pemilihanDao.getNikLastRowPemilihan().catch { emit(null) }
 }

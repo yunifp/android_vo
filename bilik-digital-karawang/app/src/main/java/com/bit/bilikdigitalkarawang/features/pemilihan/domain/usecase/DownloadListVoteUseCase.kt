@@ -26,7 +26,7 @@ class DownloadListVoteUseCase @Inject constructor(
             // Get device ID
             val deviceId: String = getDeviceIdUseCase()
 
-            // Download pemilih data
+            // Download vote data
             val result = repository.getListVote(token, deviceId)
 
             Log.d("LOGASF", token)
@@ -34,17 +34,23 @@ class DownloadListVoteUseCase @Inject constructor(
             Log.d("LOGASF", result.toString())
 
             if (result.success) {
-                result.listVoteDto.voteDtos.map { vote ->
-                    val pemilihan = vote.toPemilihanEntity()
+                // 1. AMBIL DAFTAR KANDIDAT DARI LOKAL DB UNTUK MEMBUAT PETA HE
+                val daftarKandidat = repository.getKandidat().first()
+                val daftarKandidatIds = daftarKandidat.map { it.noUrut }
+
+                // 2. LOOP DAN KONVERSI VOTE KE ENTITAS HE LALU SIMPAN
+                result.listVoteDto.voteDtos.forEach { vote ->
+                    // Masukkan daftarKandidatIds ke dalam fungsi mapper
+                    val pemilihan = vote.toPemilihanEntity(daftarKandidatIds)
                     repository.insertPemilihan(pemilihan)
                 }
                 emit(Resource.Success(result))
             } else {
-                emit(Resource.Error("Gagal mengunduh data pemilih"))
+                emit(Resource.Error("Gagal mengunduh data pemilihan"))
             }
 
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Gagal mengunduh data pemilih"))
+            emit(Resource.Error(e.localizedMessage ?: "Gagal mengunduh data pemilihan"))
         }
     }
 }

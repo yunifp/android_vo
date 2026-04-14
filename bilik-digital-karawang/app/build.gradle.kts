@@ -82,6 +82,7 @@ dependencies {
     val nav_version = "2.9.3"
 
     implementation("androidx.navigation:navigation-compose:$nav_version")
+    implementation("com.google.mlkit:face-detection:16.1.6")
 
     // Hilt
     val hiltVersion = "2.57"
@@ -138,5 +139,12 @@ dependencies {
     implementation("com.itextpdf:io:7.2.5")
 
     implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // Finger Modul
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
 }

@@ -11,11 +11,16 @@ import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.CekHasVote
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.GetDetailPemilihUseCase
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.GetDetailPemilihanUseCase
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.GetLastRowPemilihanUseCase
+import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.GetKandidatUseCase
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.PrintHasilVotingUseCase
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.usecase.UpdateHasPrintUlangUseCase
+import com.bit.bilikdigitalkarawang.utils.PaillierHE
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -30,7 +35,8 @@ class PrintUlang2ViewModel @Inject constructor(
     private val getDetailPemilihUseCase: GetDetailPemilihUseCase,
     private val cekHasPrintUlangUseCase: CekHasPrintUlangUseCase,
     private val updateHasPrintUlangUseCase: UpdateHasPrintUlangUseCase,
-    private val getLastRowPemilihanUseCase: GetLastRowPemilihanUseCase
+    private val getLastRowPemilihanUseCase: GetLastRowPemilihanUseCase,
+    private val getKandidatUseCase: GetKandidatUseCase // TAMBAHAN UNTUK NAMA KANDIDAT
 ): ViewModel() {
     private val _state = MutableStateFlow(PrintUlang2State())
     val state: StateFlow<PrintUlang2State> = _state
@@ -44,24 +50,13 @@ class PrintUlang2ViewModel @Inject constructor(
             getLastRowPemilihanUseCase()
                 .collect { result ->
                     when (result) {
-                        is Resource.Loading -> {
-//                            _state.update {
-//                                it.copy(isLoading = true, error = null)
-//                            }
-                        }
-
+                        is Resource.Loading -> { }
                         is Resource.Success -> {
-                            setNik(result.data!!)
+                            if (result.data != null) {
+                                setNik(result.data)
+                            }
                         }
-
-                        is Resource.Error -> {
-//                            _state.update {
-//                                it.copy(
-//                                    isLoading = false,
-//                                    error = result.message
-//                                )
-//                            }
-                        }
+                        is Resource.Error -> { }
                     }
                 }
         }
@@ -178,11 +173,54 @@ class PrintUlang2ViewModel @Inject constructor(
                 return@launch
             }
 
+            // =========================================================
+            // MENDEKRIPSI HOMOMORPHIC UNTUK MENDAPATKAN NO URUT KANDIDAT
+            // =========================================================
+            var extractedNoUrut: String? = null
+            var extractedNamaKandidat: String? = null
+
+            if (detail.idStatus == 1) { // Hanya ekstrak jika suara Sah
+                try {
+                    val type = object : TypeToken<Map<String, String>>() {}.type
+                    val mapSuaraPemilih: Map<String, String> = Gson().fromJson(detail.heVotesMap, type)
+
+                    // Cari kandidat yang nilai dekripsi Paillier-nya adalah 1 (satu)
+                    for ((kandidatId, ciphertext) in mapSuaraPemilih) {
+                        val plainValue = PaillierHE.decrypt(ciphertext)
+                        if (plainValue == 1) {
+                            extractedNoUrut = kandidatId
+                            break
+                        }
+                    }
+
+                    // Jika nomor urut ketemu, cari nama kandidatnya
+                    if (extractedNoUrut != null) {
+                        val resourceKandidat = getKandidatUseCase().first { it !is Resource.Loading }
+                        if (resourceKandidat is Resource.Success) {
+                            val kandidat = resourceKandidat.data?.find { it.noUrut == extractedNoUrut }
+                            extractedNamaKandidat = kandidat?.namaCalon
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    _state.update {
+                        it.copy(
+                            isPrinting = false,
+                            printingStatus = false,
+                            printingMsg = "Gagal mendekripsi suara. Pastikan Kunci Keamanan valid."
+                        )
+                    }
+                    return@launch
+                }
+            }
+            // =========================================================
+
             val result = printHasilVotingUseCase(
                 printMode = PrintMode.RESI_CETAK_ULANG,
                 idStatus = detail.idStatus,
-                noUrut = detail.noUrut,
-                namaKandidat = detail.namaKandidat
+                noUrut = extractedNoUrut, // Mengirimkan hasil Dekripsi
+                namaKandidat = extractedNamaKandidat // Mengirimkan hasil Dekripsi
             )
 
             if(result.isSuccess) {
@@ -206,32 +244,27 @@ class PrintUlang2ViewModel @Inject constructor(
     }
 
     fun selesaiPrintUlang() {
-        updateHasPrintUlangUseCase(_state.value.nik).onEach { result ->
-            when (result) {
-                is Resource.Loading -> {
-                    _state.update { it.copy(updatingHasPrintUlangStatus = true) }
+        viewModelScope.launch {
+            _state.update { it.copy(updatingHasPrintUlangStatus = true) }
+            val result = updateHasPrintUlangUseCase(_state.value.nik)
+            if (result == CommonStatus.Success) {
+                _state.update {
+                    it.copy(
+                        updatingHasPrintUlang = true,
+                        updatingHasPrintUlangStatus = true,
+                        updatingHasPrintUlangMsg = "Berhasil mencetak ulang"
+                    )
                 }
-                is Resource.Success -> {
-                    _state.update {
-                        it.copy(
-                            updatingHasPrintUlang = result.data == CommonStatus.Success,
-                            updatingHasPrintUlangStatus = true,
-                            updatingHasPrintUlangMsg = result.message ?: "Berhasil mencetak ulang"
-                        )
-                    }
-
-                }
-                is Resource.Error -> {
-                    _state.update {
-                        it.copy(
-                            updatingHasPrintUlang = false,
-                            updatingHasPrintUlangMsg = result.message ?: "Terjadi Kesalahan",
-                            updatingHasPrintUlangStatus = false,
-                        )
-                    }
+            } else {
+                _state.update {
+                    it.copy(
+                        updatingHasPrintUlang = false,
+                        updatingHasPrintUlangMsg = "Terjadi Kesalahan",
+                        updatingHasPrintUlangStatus = false,
+                    )
                 }
             }
-        }.launchIn(viewModelScope)
+        }
     }
 
     fun toggleSelesaiPrintUlang(value: Boolean) {

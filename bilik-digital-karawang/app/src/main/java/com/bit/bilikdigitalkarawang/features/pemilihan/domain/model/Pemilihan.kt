@@ -4,8 +4,7 @@ data class Pemilihan(
     val id: Int = 0,
     val nik: String,
     val idDpt: String,
-    val noUrut: String? = null,
-    val namaKandidat: String? = null,
+    val heVotesMap: String, // Sesuaikan dengan Entity
     val idStatus: Int,
     val jenisKelamin: String,
     val hasPrintUlang: Int

@@ -7,6 +7,7 @@ import com.bit.bilikdigitalkarawang.common.Resource
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.repository.PemilihanRepository
 import com.bit.bilikdigitalkarawang.shared.data.source.local.entity.PemilihanEntity
 import com.bit.bilikdigitalkarawang.utils.Encrypt
+import com.bit.bilikdigitalkarawang.utils.PaillierHE
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,6 +42,8 @@ class ImportPemilihanFromJsonUseCase @Inject constructor(
                 return@flow
             }
 
+
+
             // 2. Parse JSON
             val exportData = try {
                 gson.fromJson(json, ExportData::class.java)
@@ -50,6 +53,14 @@ class ImportPemilihanFromJsonUseCase @Inject constructor(
             } catch (e: Exception) {
                 emit(Resource.Error("Gagal parse JSON: ${e.localizedMessage}"))
                 return@flow
+            }
+
+            if (!exportData.metadata.paillierKeysAes.isNullOrEmpty()) {
+                val decryptedKeysJson = Encrypt.decryptToStringOrEmpty(exportData.metadata.paillierKeysAes)
+                if (decryptedKeysJson.isNotEmpty()) {
+                    // Tanamkan kunci lama ke memory device baru!
+                    PaillierHE.importKeysFromJson(decryptedKeysJson)
+                }
             }
 
             // 3. Validate data
@@ -77,13 +88,12 @@ class ImportPemilihanFromJsonUseCase @Inject constructor(
             exportData.pemilihanList.forEach { pemilihanExport ->
                 try {
                     val entity = PemilihanEntity(
-                        nik = Encrypt.decryptToStringOrEmpty(pemilihanExport.nik),       // String (wajib)
-                        noUrut = Encrypt.decryptToString(pemilihanExport.noUrut),           // Int? (nullable)
-                        namaKandidat = Encrypt.decryptToString(pemilihanExport.namaKandidat), // String? (nullable)
-                        idStatus = Encrypt.decryptToIntOrDefault(pemilihanExport.idStatus, 0), // Int (default 0)
-                        idDpt = Encrypt.decryptToStringOrEmpty(pemilihanExport.idDpt),   // String (wajib)
-                        jenisKelamin = Encrypt.decryptToStringOrEmpty(pemilihanExport.jenisKelamin), // String (wajib)
-                        hasPrintUlang = Encrypt.decryptToIntOrDefault(pemilihanExport.hasPrintUlang, 0), // Int (default 0)
+                        nik = Encrypt.decryptToStringOrEmpty(pemilihanExport.nik),
+                        heVotesMap = Encrypt.decryptToStringOrEmpty(pemilihanExport.heVotesMap), // AES Dekripsi -> Kembali jadi String HE
+                        idStatus = Encrypt.decryptToIntOrDefault(pemilihanExport.idStatus, 0),
+                        idDpt = Encrypt.decryptToStringOrEmpty(pemilihanExport.idDpt),
+                        jenisKelamin = Encrypt.decryptToStringOrEmpty(pemilihanExport.jenisKelamin),
+                        hasPrintUlang = Encrypt.decryptToIntOrDefault(pemilihanExport.hasPrintUlang, 0)
                     )
                     repository.insertPemilihan(entity)
                     successCount++

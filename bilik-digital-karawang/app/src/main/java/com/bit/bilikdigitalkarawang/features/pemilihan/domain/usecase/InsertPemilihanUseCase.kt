@@ -5,8 +5,11 @@ import com.bit.bilikdigitalkarawang.common.Resource
 import com.bit.bilikdigitalkarawang.features.pemilihan.domain.repository.PemilihanRepository
 import com.bit.bilikdigitalkarawang.shared.data.source.local.datastore.DataStoreDiv
 import com.bit.bilikdigitalkarawang.shared.data.source.local.entity.PemilihanEntity
+import com.bit.bilikdigitalkarawang.utils.PaillierHE
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
@@ -40,16 +43,42 @@ class InsertPemilihanUseCase @Inject constructor(
             }
         }
 
+        // Tentukan Status (1 = Sah, 2 = Tidak Sah, 3 = Abstain)
         val idStatus = when {
             noUrut.isEmpty() -> 3
             noUrut.size > 1 -> 2
             else -> 1
         }
 
+        // ====================================================================
+        // PROSES HOMOMORPHIC ENCRYPTION SAAT PEMILIH MENCOBLOS
+        // ====================================================================
+        PaillierHE.generateKeys() // Pastikan Kunci HE sudah siap di memory
+
+        val mapSuaraHE = mutableMapOf<String, String>()
+        val chosenKandidatId = if (idStatus == 1) noUrut.first() else null
+
+        // Ambil daftar kandidat dari lokal DB untuk membangun Peta (Map) Suara
+        val daftarKandidat = repository.getKandidat().first()
+
+        daftarKandidat.forEach { kandidat ->
+            if (kandidat.noUrut == chosenKandidatId) {
+                // Jika kandidat ini yang dipilih, simpan angka 1 terenkripsi
+                mapSuaraHE[kandidat.noUrut] = PaillierHE.encrypt(1)
+            } else {
+                // Jika tidak dipilih (atau jika suara tidak sah/abstain), simpan 0 terenkripsi
+                mapSuaraHE[kandidat.noUrut] = PaillierHE.encrypt(0)
+            }
+        }
+
+        // Konversi Map Enkripsi ke bentuk JSON String
+        val heVotesMapJson = Gson().toJson(mapSuaraHE)
+        // ====================================================================
+
+        // Simpan Entitas Baru dengan format Homomorfik (heVotesMap)
         val pemilihan = PemilihanEntity(
             nik = nik,
-            noUrut = if (idStatus == 1) noUrut.first() else null,
-            namaKandidat = if (idStatus == 1) namaKandidat.first() else null,
+            heVotesMap = heVotesMapJson, // Gantikan noUrut dan namaKandidat dengan Peta HE
             idStatus = idStatus,
             idDpt = idDpt ?: "",
             jenisKelamin = jenisKelamin
